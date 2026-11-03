@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HACK//CHECK</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020604; --panel:rgba(2,14,8,.82); --line:#0d3b22;
+  --g:#00ff66; --g2:#00c853; --gdim:#127a3e; --red:#ff2b4e; --amber:#ffb000; --cyan:#00e5ff; --txt:#b9ffd4; --mut:#5c9e78;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,'Courier New',monospace; --pix:'VT323',var(--mono);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:15px;min-height:100%;overflow-x:hidden}
+::selection{background:var(--g);color:#000}
+#rain{position:fixed;inset:0;z-index:0;opacity:.22;pointer-events:none}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);
+  box-shadow:inset 0 0 160px rgba(0,0,0,.95)}
+.crt::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,255,102,.05),transparent 70%);animation:flick 4s infinite}
+@keyframes flick{0%,100%{opacity:1}50%{opacity:.85}52%{opacity:.6}54%{opacity:.9}}
+.wrap{position:relative;z-index:2;max-width:1120px;margin:0 auto;padding:18px 16px 80px}
+
+/* status bar */
+.status{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;font-size:12px;color:var(--mut);border-bottom:1px dashed var(--line);padding-bottom:8px}
+.status b{color:var(--g)} .blink{animation:blink 1s steps(1) infinite} @keyframes blink{50%{opacity:0}}
+.status button{background:none;border:1px solid var(--line);color:var(--mut);font:inherit;cursor:pointer;padding:1px 8px}
+.status button:hover{color:var(--g);border-color:var(--g)}
+
+/* logo */
+header{text-align:center;padding:34px 0 10px}
+.glitch{position:relative;display:inline-block;font-family:var(--pix);font-size:clamp(54px,11vw,120px);line-height:.9;color:var(--g);letter-spacing:4px;
+  text-shadow:0 0 6px var(--g),0 0 24px rgba(0,255,102,.55)}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;overflow:hidden}
+.glitch::before{color:var(--red);transform:translate(-3px,0);clip-path:inset(0 0 60% 0);animation:g1 2.6s infinite linear alternate-reverse;mix-blend-mode:screen}
+.glitch::after{color:var(--cyan);transform:translate(3px,0);clip-path:inset(55% 0 0 0);animation:g2 3.1s infinite linear alternate-reverse;mix-blend-mode:screen}
+@keyframes g1{0%{clip-path:inset(0 0 85% 0)}20%{clip-path:inset(40% 0 40% 0)}40%{clip-path:inset(10% 0 70% 0)}60%{clip-path:inset(70% 0 5% 0)}80%{clip-path:inset(30% 0 50% 0)}100%{clip-path:inset(0 0 95% 0)}}
+@keyframes g2{0%{clip-path:inset(80% 0 0 0)}25%{clip-path:inset(20% 0 60% 0)}50%{clip-path:inset(60% 0 20% 0)}75%{clip-path:inset(5% 0 85% 0)}100%{clip-path:inset(45% 0 35% 0)}}
+.tag{color:var(--mut);margin-top:10px;font-size:14px;min-height:1.4em}
+.tag .cur{display:inline-block;width:9px;height:1em;background:var(--g);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+
+/* tabs */
+nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:22px 0 18px}
+nav button{font:600 14px var(--mono);background:rgba(0,30,15,.6);color:var(--mut);border:1px solid var(--line);padding:10px 18px;cursor:pointer;letter-spacing:1px;position:relative;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+nav button:hover{color:var(--g);border-color:var(--gdim)}
+nav button.on{color:#000;background:var(--g);border-color:var(--g);box-shadow:0 0 18px rgba(0,255,102,.5)}
+.tab{display:none}.tab.on{display:block;animation:fadein .35s}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);padding:18px;margin-bottom:16px;position:relative;backdrop-filter:blur(2px)}
+.panel::before{content:attr(data-h);position:absolute;top:-9px;left:14px;background:var(--bg);padding:0 8px;font-size:11px;letter-spacing:2px;color:var(--g)}
+.corner{position:absolute;width:10px;height:10px;border-color:var(--g);border-style:solid}
+.c1{top:-1px;left:-1px;border-width:2px 0 0 2px}.c2{top:-1px;right:-1px;border-width:2px 2px 0 0}.c3{bottom:-1px;left:-1px;border-width:0 0 2px 2px}.c4{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+
+/* input */
+.cmd{display:flex;align-items:stretch;border:1px solid var(--gdim);background:#000;box-shadow:0 0 0 1px rgba(0,255,102,.08),0 0 30px rgba(0,255,102,.08) inset}
+.cmd:focus-within{border-color:var(--g);box-shadow:0 0 22px rgba(0,255,102,.35)}
+.cmd .pr{padding:0 12px;display:flex;align-items:center;color:var(--g);font-weight:800;white-space:nowrap}
+.cmd input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--g);font:600 18px var(--mono);padding:14px 4px;caret-color:var(--g)}
+.cmd input::placeholder{color:#1f5c3a}
+input::-ms-reveal,input::-ms-clear{display:none}
+.btn{font:800 15px var(--mono);letter-spacing:2px;background:var(--g);color:#000;border:0;padding:0 22px;cursor:pointer;transition:.15s}
+.btn:hover{background:#7dffb0;box-shadow:0 0 22px var(--g)}
+.btn:disabled{background:var(--gdim);cursor:wait}
+.ghost{font:600 12px var(--mono);background:none;color:var(--mut);border:1px solid var(--line);padding:6px 12px;cursor:pointer;letter-spacing:1px}
+.ghost:hover,.ghost.on{color:var(--g);border-color:var(--g)}
+.ghost.on{background:rgba(0,255,102,.1)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.small{font-size:12px;color:var(--mut)}
+.eye{background:none;border:0;color:var(--mut);cursor:pointer;font:600 12px var(--mono);padding:0 10px}
+.eye:hover{color:var(--g)}
+
+/* terminal log */
+.log{font-size:13px;line-height:1.6;min-height:20px;margin-top:14px;white-space:pre-wrap;word-break:break-all}
+.log .ok{color:var(--g)}.log .bad{color:var(--red)}.log .warn{color:var(--amber)}.log .dim{color:var(--mut)}.log .cy{color:var(--cyan)}
+
+/* verdict */
+.verdict{text-align:center;padding:26px 10px;margin-top:14px;border:2px solid;position:relative;overflow:hidden}
+.verdict h2{font-family:var(--pix);font-size:clamp(40px,7vw,72px);margin:0;line-height:1;letter-spacing:3px}
+.verdict p{margin:8px 0 0;font-size:15px}
+.verdict.pwned{border-color:var(--red);color:var(--red);background:rgba(255,43,78,.08);text-shadow:0 0 14px rgba(255,43,78,.7);animation:alarm 1s 3}
+.verdict.safe{border-color:var(--g);color:var(--g);background:rgba(0,255,102,.06);text-shadow:0 0 14px rgba(0,255,102,.6)}
+@keyframes alarm{0%,100%{background:rgba(255,43,78,.08)}50%{background:rgba(255,43,78,.35)}}
+.verdict .sim{position:absolute;top:8px;right:-34px;transform:rotate(35deg);background:var(--amber);color:#000;font-size:11px;font-weight:800;padding:3px 40px;letter-spacing:2px;text-shadow:none}
+
+/* breach cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:16px}
+.card{border:1px solid var(--line);background:rgba(0,0,0,.55);padding:14px;position:relative;cursor:pointer;transition:.15s}
+.card:hover{border-color:var(--gdim);transform:translateY(-2px)}
+.card.hit{border-left:3px solid var(--red)}
+.card h3{margin:0 0 4px;font-size:16px;color:#fff;display:flex;justify-content:space-between;gap:8px}
+.card h3 span{color:var(--amber);font-size:12px;font-weight:400}
+.card .rec{color:var(--red);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chip{font-size:11px;padding:2px 7px;border:1px solid var(--line);color:var(--txt);background:rgba(0,255,102,.05)}
+.chip.r{border-color:rgba(255,43,78,.5);color:#ff8a9d;background:rgba(255,43,78,.08)}
+.card .desc{display:none;margin-top:8px;font-size:12px;color:var(--mut);line-height:1.5}
+.card.open .desc{display:block}
+.bar{height:4px;background:#06210f;margin-top:10px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--g2),var(--red))}
+
+/* strength */
+.meter{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:14px 0 6px}
+.meter i{height:12px;background:#07200f;transition:.25s}
+.lvl{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
+.lvl .name{font-family:var(--pix);font-size:42px;line-height:1;letter-spacing:2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{border:1px solid var(--line);padding:8px;text-align:center}
+.stat b{display:block;font-size:20px;color:#fff}.stat span{font-size:11px;color:var(--mut);letter-spacing:1px}
+table.ct{width:100%;border-collapse:collapse;font-size:13px}
+table.ct td{padding:9px 6px;border-bottom:1px dashed var(--line);vertical-align:top}
+table.ct td:last-child{text-align:right;white-space:nowrap;font-weight:800}
+table.ct .sub{font-size:11px;color:var(--mut)}
+table.ct .tb{height:3px;background:#07200f;margin-top:5px}table.ct .tb i{display:block;height:100%}
+.segs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.seg{border:1px solid;padding:5px 8px;font-size:12px;text-align:center}
+.seg b{display:block;font-size:15px;color:#fff;word-break:break-all}
+.tips{margin:8px 0 0;padding-left:0;list-style:none;font-size:13px;line-height:1.55}
+.tips li{padding-left:22px;position:relative;margin-bottom:6px}
+.tips li::before{content:">";position:absolute;left:4px;color:var(--g)}
+.tips li.w::before{content:"!";color:var(--amber)}.tips li.x::before{content:"x";color:var(--red)}
+.hashes{font-size:12px;line-height:1.5;word-break:break-all}
+.hashes div{margin-bottom:8px}.hashes span{color:var(--mut);display:inline-block;min-width:64px}
+.hashes code{color:var(--cyan)}
+.kanon{font-size:14px;word-break:break-all;line-height:1.7}
+.kanon .pre{background:var(--amber);color:#000;padding:0 2px;font-weight:800}
+.kanon .suf{color:var(--mut)}
+.pwbox{font-family:var(--pix);font-size:44px;text-align:center;line-height:1.1;margin:6px 0}
+
+/* attack overlay */
+#atk{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px}
+#atk.on{display:flex}
+#atk .box{width:min(760px,100%);border:1px solid var(--g);background:#000;padding:22px;box-shadow:0 0 60px rgba(0,255,102,.25)}
+#atk .tgt{font-family:var(--pix);font-size:clamp(34px,7vw,64px);text-align:center;letter-spacing:6px;color:var(--g);margin:18px 0;word-break:break-all;min-height:1.2em}
+#atk .tgt .lk{color:#fff;text-shadow:0 0 10px var(--g)}
+#atk .tgt .sc{color:var(--gdim)}
+#atk .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;text-align:center}
+#atk .meta b{display:block;font-size:16px;color:#fff}
+#atk .res{text-align:center;font-family:var(--pix);font-size:clamp(22px,3.4vw,30px);margin-top:16px;min-height:1.2em}
+#atkClose{font:800 14px var(--mono);letter-spacing:2px;padding:8px 18px;border:1px solid var(--red);color:var(--red);background:rgba(255,43,78,.1)}
+#atkClose:hover{background:var(--red);color:#000}
+#atk select{background:#000;color:var(--g);border:1px solid var(--line);font:12px var(--mono);padding:4px}
+
+/* boot */
+#boot{position:fixed;inset:0;z-index:60;background:#000;padding:30px;font-size:14px;color:var(--g);white-space:pre-wrap;overflow:hidden;cursor:pointer}
+#boot.gone{opacity:0;pointer-events:none;transition:opacity .6s}
+#boot .skip{position:fixed;bottom:16px;right:20px;color:var(--mut);font-size:12px}
+
+footer{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(0,0,0,.9);border-top:1px solid var(--line);font-size:12px;color:var(--mut);overflow:hidden;white-space:nowrap;height:30px;line-height:30px}
+footer .tk{display:inline-block;padding-left:100%;animation:tick 70s linear infinite}
+footer .tk b{color:var(--red)} footer .tk em{color:var(--g);font-style:normal}
+@keyframes tick{to{transform:translateX(-100%)}}
+.search{width:100%;background:#000;border:1px solid var(--line);color:var(--g);font:14px var(--mono);padding:10px;outline:0}
+.search:focus{border-color:var(--g)}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<style>
+.top{display:flex;justify-content:flex-end;gap:6px}
+.top button{background:none;border:1px solid var(--line);color:var(--mut);font:12px var(--mono);cursor:pointer;padding:2px 8px}
+.top button:hover{color:var(--g);border-color:var(--g)}
+.big{text-align:center;padding:26px 10px 18px}
+.big .lbl{font-size:12px;letter-spacing:3px;color:var(--mut)}
+.big .time{font-family:var(--pix);font-size:clamp(52px,11vw,110px);line-height:1;margin:6px 0 4px;text-transform:uppercase;letter-spacing:2px}
+.big .rate{font-family:var(--pix);font-size:clamp(28px,5vw,40px);letter-spacing:3px}
+.pwn{text-align:center;color:var(--red);font-weight:800;letter-spacing:2px;margin-top:8px;text-shadow:0 0 10px rgba(255,43,78,.6)}
+.hdr{padding:26px 0 6px}
+.cx{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:640px;margin:4px auto 18px}
+.cxi{border:1px solid var(--line);padding:10px 4px;text-align:center;font-size:11px;letter-spacing:1px;color:var(--mut);opacity:.55}
+.cxi b{display:block;font-size:16px;margin-bottom:2px;color:var(--red)}
+.cxi.on{opacity:1;border-color:var(--gdim)}.cxi.on b{color:var(--g)}
+@media(max-width:520px){.cx{grid-template-columns:repeat(3,1fr)}}
+.card .sum{font-size:12px;color:var(--mut);line-height:1.5;margin-top:6px}
+.pwsum{font-weight:400;letter-spacing:0;color:#ff9aab;font-size:13px;max-width:560px;margin:8px auto 0;line-height:1.5;text-shadow:none}
+</style>
+<canvas id="rain"></canvas>
+<div class="crt"></div>
+
+<div class="wrap">
+  <div class="top"><button id="sndBtn">SND:OFF</button><button id="wipeBtn">WIPE</button></div>
+
+  <header class="hdr"><div class="glitch" data-t="HACK//CHECK">HACK//CHECK</div></header>
+
+  <nav>
+    <button data-tab="pass" class="on">PASSWORD</button>
+    <button data-tab="email">EMAIL</button>
+  </nav>
+
+  <section class="tab on" id="t-pass">
+    <div class="panel" data-h="// PASSWORD">
+      <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+      <form id="pwForm" class="cmd" autocomplete="off" onsubmit="return false">
+        <span class="pr">&gt;</span>
+        <input id="pw" type="password" placeholder="type a password" spellcheck="false" autocomplete="new-password">
+      </form>
+    </div>
+
+    <div id="pwRes" class="hidden">
+      <div class="panel" data-h="// TIME TO CRACK">
+        <div class="big">
+          <div class="lbl">BRUTE-FORCING EVERY COMBINATION WOULD TAKE</div>
+          <div class="time" id="bigTime">-</div>
+          <div class="rate" id="bigRate">-</div>
+          <div class="lbl" id="combo" style="margin-top:8px;letter-spacing:1px"></div>
+          <div class="meter" id="meter" style="max-width:520px;margin:14px auto 0"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="pwn hidden" id="pwnLine"></div>
+        </div>
+        <div class="cx" id="cx"></div>
+        <div class="row" style="justify-content:center"><button class="btn" id="atkBtn" style="padding:10px 20px">&gt; BRUTE FORCE IT</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" id="t-email">
+    <div class="panel" data-h="// EMAIL">
+      <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+      <form id="emailForm" class="cmd" autocomplete="off">
+        <span class="pr">&gt;</span>
+        <input id="email" type="email" placeholder="you@email.com" spellcheck="false" autocomplete="off">
+        <button class="btn" id="scanBtn">SCAN</button>
+      </form>
+      <div class="row">
+        <button class="ghost on" data-mode="live">LIVE</button>
+        <button class="ghost" data-mode="sim">OFFLINE DEMO</button>
+      </div>
+      <div id="emailOut"></div>
+    </div>
+  </section>
+</div>
+
+<div id="atk">
+  <div class="box">
+    <div class="row" style="justify-content:space-between;margin:0">
+      <span style="color:var(--red);font-weight:800">// LIVE BRUTE FORCE</span>
+      <button class="ghost" id="atkClose">STOP</button>
+    </div>
+    <div class="tgt" id="atkTgt"></div>
+    <div class="meta">
+      <div><b id="atkRate">-</b>GUESSES/SEC</div>
+      <div><b id="atkTries">0</b>TRIED</div>
+      <div><b id="atkEta">00:00:00</b>ELAPSED</div>
+    </div>
+    <div class="res" id="atkRes"></div>
+  </div>
+</div>
+
+
+
+<script>
+"use strict";
+/* ================= DATA ================= */
+// Notable breaches (record counts are approximate public figures)
+const BREACHES=[
+ {n:"Yahoo",y:2013,r:3000000000,d:["Email addresses","Passwords","Names","Security questions","Dates of birth","Phone numbers"],t:"All 3 billion Yahoo accounts were compromised in 2013. It was disclosed years later and is still the largest breach on record."},
+ {n:"Collection #1",y:2019,r:772904991,d:["Email addresses","Passwords"],t:"A huge credential-stuffing list built from thousands of earlier breaches, circulated on hacking forums."},
+ {n:"Facebook",y:2021,r:509458528,d:["Phone numbers","Names","Locations","Dates of birth","Email addresses"],t:"Data scraped by abusing a contact-import feature, then dumped for free on a hacking forum."},
+ {n:"MySpace",y:2008,r:359420698,d:["Email addresses","Passwords","Usernames"],t:"The old social network stored passwords very weakly, making them trivial to crack."},
+ {n:"Wattpad",y:2020,r:268765495,d:["Email addresses","Passwords","Usernames","IP addresses","Dates of birth"],t:"The story-sharing platform's user database was sold, then leaked publicly."},
+ {n:"Deezer",y:2019,r:229037936,d:["Email addresses","Names","Dates of birth","Genders","Locations"],t:"A third-party partner's backup of the music service's user data leaked in 2022."},
+ {n:"Twitter",y:2022,r:211524284,d:["Email addresses","Names","Usernames","Follower counts"],t:"An API vulnerability let attackers link email addresses to Twitter accounts at scale."},
+ {n:"Zynga",y:2019,r:172869660,d:["Email addresses","Passwords","Usernames","Phone numbers"],t:"The Words With Friends maker was breached. Passwords were salted SHA-1."},
+ {n:"LinkedIn",y:2012,r:164611595,d:["Email addresses","Passwords"],t:"Weakly protected passwords were stolen. The full dump surfaced in 2016 and most passwords were cracked."},
+ {n:"Dubsmash",y:2018,r:161749950,d:["Email addresses","Passwords","Usernames","Names","Locations"],t:"Part of a mass sale of 600+ million accounts from 16 sites on the dark web."},
+ {n:"Adobe",y:2013,r:152445165,d:["Email addresses","Passwords","Password hints","Usernames"],t:"Passwords were badly encrypted and password hints were stored in plain text, so many could be worked out from the hints alone."},
+ {n:"MyFitnessPal",y:2018,r:143606147,d:["Email addresses","Passwords","Usernames","IP addresses"],t:"The fitness app's database was breached and later sold alongside other breaches."},
+ {n:"Canva",y:2019,r:137272116,d:["Email addresses","Passwords","Names","Usernames","Locations"],t:"The design platform was breached. Its passwords were bcrypt-hashed, which slowed attackers down."},
+ {n:"PlayStation Network",y:2011,r:77000000,d:["Email addresses","Passwords","Names","Addresses","Dates of birth"],t:"Sony took PSN offline for 23 days after an intrusion."},
+ {n:"Dropbox",y:2012,r:68648009,d:["Email addresses","Passwords"],t:"An employee reused a password from another breach, which let attackers in."},
+ {n:"Neopets",y:2013,r:66620654,d:["Email addresses","Passwords","Usernames","Dates of birth","IP addresses"],t:"The virtual-pet site was breached. Passwords were stored in plain text."},
+ {n:"Edmodo",y:2017,r:43423561,d:["Email addresses","Passwords","Usernames"],t:"The education platform's accounts were stolen and put up for sale."},
+ {n:"Chegg",y:2018,r:39721127,d:["Email addresses","Passwords","Usernames","Names"],t:"The student help site's user database was stolen. Passwords were weakly protected."},
+ {n:"Last.fm",y:2012,r:37217682,d:["Email addresses","Passwords","Usernames"],t:"The music site stored passwords weakly. Over 96% were cracked within two hours of the leak."},
+ {n:"RockYou",y:2009,r:32603388,d:["Email addresses","Passwords"],t:"Passwords were stored in PLAIN TEXT. 'rockyou.txt' is still the most famous password-cracking wordlist."},
+ {n:"Mathway",y:2020,r:25692862,d:["Email addresses","Passwords","Names"],t:"The maths homework app was breached and its data sold."},
+ {n:"Duolingo",y:2023,r:2676696,d:["Email addresses","Names","Usernames","Languages learned"],t:"Data scraped from an exposed API and published on a hacking forum."},
+ {n:"Gawker",y:2010,r:1247894,d:["Email addresses","Passwords","Usernames"],t:"The gossip site's user database was leaked. Its old password storage only used the first 8 characters of each password."}
+];
+const SENSITIVE=/password|security question|phone|date of birth|address(?!es$)|addresses$/i;
+
+// top leaked passwords (rank = position)
+const COMMON=("123456 password 123456789 12345678 12345 qwerty 1234567 111111 1234567890 123123 abc123 1234 password1 iloveyou 1q2w3e4r 000000 qwerty123 zaq12wsx dragon sunshine princess letmein 654321 monkey 27653 1qaz2wsx 123321 qwertyuiop superman asdfghjkl football baseball welcome admin login starwars shadow master hello freedom whatever qazwsx trustno1 michael jordan23 liverpool chelsea arsenal charlie aa123456 donald password123 batman access 696969 mustang ashley bailey passw0rd hunter2 123qwe 1q2w3e 987654321 666666 7777777 555555 88888888 121212 112233 qwerty1 qwe123 abcdef abcd1234 pokemon minecraft fortnite roblox naruto pikachu killer hockey soccer ranger hunter buster thomas tigger robert soccer1 jennifer jessica daniel harley pepper ginger joshua cookie maggie summer winter spring autumn flower lovely loveme iloveu blink182 computer internet samsung apple google facebook youtube twitter banana chocolate cheese orange purple matrix hacker secret secret1 test test123 guest root toor changeme default azerty 11111111 999999 101010 147258369 159753 asdfgh zxcvbnm zxcvbn qweasd 1qazxsw2 q1w2e3r4 a1b2c3 cheese1 money london england").split(" ");
+// common words, names & culture (attackers' dictionaries)
+const WORDS=("love baby angel happy lucky smile magic dream star moon sun sky blue red black white green gold silver diamond king queen prince boss god devil demon dragon tiger lion wolf eagle shark bear panda monkey dog cat horse bunny kitty puppy fish bird snake spider ninja pirate knight wizard warrior soldier sniper gamer player legend hero ghost zombie vampire alien robot rocket army navy royal marine ship sailor captain admiral portsmouth southampton fareham solent hampshire british england london manchester united city arsenal chelsea liverpool everton spurs rangers celtic football rugby cricket tennis golf boxing racing music rock metal guitar piano dance party summer winter spring holiday beach ocean river mountain forest fire water ice storm thunder lightning shadow dark light night day time life death heaven hell power force energy speed fast cool hot sexy pretty beauty cute sweet honey sugar candy cookie pizza burger chips coffee beer vodka whisky jack james john david michael chris daniel matthew andrew joshua ryan thomas william oliver harry george jacob charlie alfie jake emma olivia sophie emily chloe jessica lucy grace ella mia amelia ava hannah lauren sarah laura amy anna kate jade ruby holly mum mummy dad daddy family mother father brother sister friend friends school college teacher student class office work admin user login welcome hello goodbye please thanks sorry yes nope secret private master pass word password qwerty letmein trust nobody somebody everyone forever always never computer laptop phone mobile apple samsung windows linux hacker hack cyber matrix neo pwned owned elite leet code coder cookie monster pokemon pikachu mario luigi zelda sonic minecraft fortnite roblox steam xbox playstation nintendo batman superman spiderman ironman marvel avengers starwars jedi vader yoda harry potter hogwarts gandalf frodo naruto goku anime manga").split(" ");
+const DICT=new Map();
+COMMON.forEach((w,i)=>{if(!DICT.has(w))DICT.set(w,i+1)});
+WORDS.forEach((w,i)=>{if(w.length>=3&&!DICT.has(w))DICT.set(w,COMMON.length+50+i*8)});
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fmtN=n=>n>=1e9?(n/1e9).toFixed(n>=1e10?0:1)+"B":n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+"M":n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+"K":String(Math.round(n));
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const ss={get(k){try{return sessionStorage.getItem(k)}catch(e){return null}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
+
+/* ---- hashes (pure JS so it works from file://) ---- */
+function padMsg(bytes,le){const l=bytes.length,t=((l+8)>>6<<6)+64,m=new Uint8Array(t);m.set(bytes);m[l]=0x80;const dv=new DataView(m.buffer),bits=l*8;
+  if(le){dv.setUint32(t-8,bits>>>0,true);dv.setUint32(t-4,Math.floor(bits/4294967296),true)}else{dv.setUint32(t-4,bits>>>0);dv.setUint32(t-8,Math.floor(bits/4294967296))}return m}
+const hexBE=w=>w.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
+const hexLE=w=>w.map(x=>{x>>>=0;let s="";for(let i=0;i<4;i++)s+=((x>>>(8*i))&255).toString(16).padStart(2,"0");return s}).join("");
+function sha1(b){const m=padMsg(b,false),dv=new DataView(m.buffer),w=new Uint32Array(80);let h=[0x67452301,0xEFCDAB89,0x98BADCFE,0x10325476,0xC3D2E1F0];
+  for(let o=0;o<m.length;o+=64){for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4);for(let i=16;i<80;i++){const x=w[i-3]^w[i-8]^w[i-14]^w[i-16];w[i]=(x<<1)|(x>>>31)}
+    let[a,b2,c,d,e]=h;for(let i=0;i<80;i++){let f,k;if(i<20){f=(b2&c)|(~b2&d);k=0x5A827999}else if(i<40){f=b2^c^d;k=0x6ED9EBA1}else if(i<60){f=(b2&c)|(b2&d)|(c&d);k=0x8F1BBCDC}else{f=b2^c^d;k=0xCA62C1D6}
+      const t=(((a<<5)|(a>>>27))+f+e+k+w[i])>>>0;e=d;d=c;c=((b2<<30)|(b2>>>2))>>>0;b2=a;a=t}
+    h=[h[0]+a,h[1]+b2,h[2]+c,h[3]+d,h[4]+e].map(x=>x>>>0)}return hexBE(h)}
+const PR=(()=>{const p=[];for(let n=2;p.length<64;n++){if(p.every(q=>n%q))p.push(n)}return p})();
+const frac=x=>Math.floor((x-Math.floor(x))*4294967296)>>>0;
+const K256=PR.map(p=>frac(Math.cbrt(p))),H256=PR.slice(0,8).map(p=>frac(Math.sqrt(p)));
+function sha256(b){const m=padMsg(b,false),dv=new DataView(m.buffer),w=new Uint32Array(64);let h=H256.slice();const r=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<m.length;o+=64){for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4);
+    for(let i=16;i<64;i++){const s0=r(w[i-15],7)^r(w[i-15],18)^(w[i-15]>>>3),s1=r(w[i-2],17)^r(w[i-2],19)^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0}
+    let[a,b2,c,d,e,f,g,hh]=h;for(let i=0;i<64;i++){const S1=r(e,6)^r(e,11)^r(e,25),ch=(e&f)^(~e&g),t1=(hh+S1+ch+K256[i]+w[i])>>>0,S0=r(a,2)^r(a,13)^r(a,22),mj=(a&b2)^(a&c)^(b2&c),t2=(S0+mj)>>>0;
+      hh=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b2;b2=a;a=(t1+t2)>>>0}
+    h=[a,b2,c,d,e,f,g,hh].map((x,i)=>(h[i]+x)>>>0)}return hexBE(h)}
+const MDK=Array.from({length:64},(_,i)=>Math.floor(Math.abs(Math.sin(i+1))*4294967296)>>>0);
+const MDS=[7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21];
+function md5(b){const m=padMsg(b,true),dv=new DataView(m.buffer);let h=[0x67452301,0xefcdab89,0x98badcfe,0x10325476];
+  for(let o=0;o<m.length;o+=64){const M=[];for(let i=0;i<16;i++)M[i]=dv.getUint32(o+i*4,true);let[A,B,C,D]=h;
+    for(let i=0;i<64;i++){let F,g;if(i<16){F=(B&C)|(~B&D);g=i}else if(i<32){F=(D&B)|(~D&C);g=(5*i+1)%16}else if(i<48){F=B^C^D;g=(3*i+5)%16}else{F=C^(B|~D);g=(7*i)%16}
+      const s=MDS[(i>>4)*4+(i%4)];F=(F+A+MDK[i]+M[g])>>>0;A=D;D=C;C=B;B=(B+((F<<s)|(F>>>(32-s))))>>>0}
+    h=[h[0]+A,h[1]+B,h[2]+C,h[3]+D].map(x=>x>>>0)}return hexLE(h)}
+function md4(b){const m=padMsg(b,true),dv=new DataView(m.buffer);let h=[0x67452301,0xefcdab89,0x98badcfe,0x10325476];const rl=(x,s)=>((x<<s)|(x>>>(32-s)))>>>0;
+  const F=(x,y,z)=>(x&y)|(~x&z),G=(x,y,z)=>(x&y)|(x&z)|(y&z),H=(x,y,z)=>x^y^z;
+  for(let o=0;o<m.length;o+=64){const X=[];for(let i=0;i<16;i++)X[i]=dv.getUint32(o+i*4,true);let[A,B,C,D]=h;
+    for(const i of[0,4,8,12]){A=rl(A+F(B,C,D)+X[i],3);D=rl(D+F(A,B,C)+X[i+1],7);C=rl(C+F(D,A,B)+X[i+2],11);B=rl(B+F(C,D,A)+X[i+3],19)}
+    const k2=0x5a827999;for(const i of[0,1,2,3]){A=rl(A+G(B,C,D)+X[i]+k2,3);D=rl(D+G(A,B,C)+X[i+4]+k2,5);C=rl(C+G(D,A,B)+X[i+8]+k2,9);B=rl(B+G(C,D,A)+X[i+12]+k2,13)}
+    const k3=0x6ed9eba1;for(const i of[0,2,1,3]){A=rl(A+H(B,C,D)+X[i]+k3,3);D=rl(D+H(A,B,C)+X[i+8]+k3,9);C=rl(C+H(D,A,B)+X[i+4]+k3,11);B=rl(B+H(C,D,A)+X[i+12]+k3,15)}
+    h=[h[0]+A,h[1]+B,h[2]+C,h[3]+D].map(x=>x>>>0)}return hexLE(h)}
+const utf8=s=>new TextEncoder().encode(s);
+const utf16le=s=>{const a=new Uint8Array(s.length*2);for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a[i*2]=c&255;a[i*2+1]=c>>8}return a};
+const ntlm=s=>md4(utf16le(s));
+
+/* ================= STRENGTH ESTIMATOR ================= */
+const LEET={"4":["a"],"@":["a"],"3":["e"],"1":["i","l"],"!":["i"],"0":["o"],"5":["s"],"$":["s"],"7":["t"],"+":["t"],"8":["b"],"9":["g"],"|":["l"]};
+const ROWS=["qwertyuiop","asdfghjkl","zxcvbnm","1234567890","!@#$%^&*()","1qaz2wsx3edc4rfv5tgb","qazwsxedcrfvtgbyhn"];
+function card(ch){if(/[a-z]/.test(ch))return 26;if(/[A-Z]/.test(ch))return 26;if(/[0-9]/.test(ch))return 10;if(ch.charCodeAt(0)<128)return 33;return 100}
+function deleet(lw){let vs=[{w:"",s:0}];for(const ch of lw){const subs=LEET[ch];const nv=[];for(const v of vs){nv.push({w:v.w+ch,s:v.s});if(subs)for(const r of subs)nv.push({w:v.w+r,s:v.s+1})}vs=nv.slice(0,32)}return vs}
+function nCk(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r}
+function capsVar(raw){const l=raw.replace(/[^a-zA-Z]/g,"");if(!l||l===l.toLowerCase())return 1;if(l===l.toUpperCase()||/^[A-Z][^A-Z]*$/.test(l)||/^[^A-Z]*[A-Z]$/.test(l))return 2;
+  const u=(l.match(/[A-Z]/g)||[]).length,lo=l.length-u;let s=0;for(let i=1;i<=Math.min(u,lo);i++)s+=nCk(l.length,i);return Math.max(s,2)}
+function analyse(pw){
+  const n=pw.length,lower=pw.toLowerCase(),M=[];
+  for(let i=0;i<n;i++){
+    for(let j=i+3;j<=Math.min(n,i+24);j++){
+      const raw=pw.slice(i,j),lw=lower.slice(i,j);
+      // dictionary (+ l33t)
+      for(const v of deleet(lw)){const r=DICT.get(v.w);if(r){const isCommon=r<=COMMON.length;M.push({i,j,g:r*capsVar(raw)*(v.s?Math.pow(2,v.s)+1:1),type:v.s?"l33t":(isCommon?"leaked":"word"),tok:raw,base:v.w})}}
+      // reversed dictionary
+      const rv=[...lw].reverse().join("");if(lw.length>=4&&DICT.has(rv))M.push({i,j,g:DICT.get(rv)*2*capsVar(raw),type:"reversed",tok:raw,base:rv});
+      // digits
+      if(/^\d+$/.test(raw)){let g=Math.pow(10,raw.length),type="digits";const v=+raw;
+        if(raw.length===4&&v>=1900&&v<=2039){g=150;type="year"}else if(raw.length===2){g=100}
+        else if((raw.length===6||raw.length===8)&&isDate(raw)){g=raw.length===6?36500:73000;type="date"}
+        M.push({i,j,g,type,tok:raw})}
+      // repeated char
+      if(/^(.)\1+$/.test(raw))M.push({i,j,g:card(raw[0])*raw.length,type:"repeat",tok:raw});
+      // repeated unit (abcabc)
+      for(let u=2;u<=4;u++){if(raw.length>=u*2&&raw.length%u===0){const unit=raw.slice(0,u);if(unit.repeat(raw.length/u)===raw&&!/^(.)\1+$/.test(raw)){let b=1;for(const c of unit)b*=card(c);M.push({i,j,g:b*(raw.length/u),type:"repeat",tok:raw})}}}
+      // sequences abc / 987
+      if(isSeq(lw))M.push({i,j,g:(/^[a0-9]|^[z9]/.test(lw)?4:26)*lw.length*2,type:"sequence",tok:raw});
+      // keyboard walk
+      if(ROWS.some(r=>r.includes(lw)||[...r].reverse().join("").includes(lw)))M.push({i,j,g:40*lw.length,type:"keyboard",tok:raw});
+    }
+  }
+  // dynamic programming: cheapest way for an attacker to cover the whole password
+  const best=new Array(n+1).fill(Infinity),back=new Array(n+1);best[0]=0;
+  for(let j=1;j<=n;j++){
+    const bc=best[j-1]+Math.log10(card(pw[j-1]));if(bc<best[j]){best[j]=bc;back[j]={i:j-1,j,type:"brute",tok:pw[j-1],g:card(pw[j-1])}}
+    for(const m of M)if(m.j===j){const c=best[m.i]+Math.log10(m.g);if(c<best[j]-1e-9){best[j]=c;back[j]=m}}
+  }
+  let segs=[];for(let j=n;j>0;){const m=back[j];segs.unshift(m);j=m.i}
+  // merge adjacent brute chars
+  const merged=[];for(const s of segs){const last=merged[merged.length-1];if(s.type==="brute"&&last&&last.type==="brute"){last.tok+=s.tok;last.g*=s.g;last.j=s.j}else merged.push({...s})}
+  let lg=best[n];const k=merged.length;let f=1;for(let i=2;i<=Math.min(k,10);i++)f*=i;lg+=Math.log10(f);
+  // pure brute-force upper bound
+  let pool=0;if(/[a-z]/.test(pw))pool+=26;if(/[A-Z]/.test(pw))pool+=26;if(/\d/.test(pw))pool+=10;if(/[^a-zA-Z0-9]/.test(pw))pool+=33;
+  lg=Math.max(0,Math.min(lg,n*Math.log10(Math.max(pool,1))));
+  return {lg,segs:merged,pool,n};
+}
+function isDate(s){const d=s.length===6?[s.slice(0,2),s.slice(2,4)]:[s.slice(0,2),s.slice(2,4),s.slice(4,8)];const a=+d[0],b=+d[1];
+  if(s.length===8){const y=+d[2];if(y<1900||y>2039){const y2=+s.slice(0,4);return y2>=1900&&y2<=2039}}return a>=1&&a<=31&&b>=1&&b<=31&&(a<=12||b<=12)}
+function isSeq(s){if(s.length<3)return false;const d=s.charCodeAt(1)-s.charCodeAt(0);if(Math.abs(d)!==1)return false;for(let i=2;i<s.length;i++)if(s.charCodeAt(i)-s.charCodeAt(i-1)!==d)return false;return/^[a-z]+$|^\d+$/.test(s)}
+
+const RIGS=[
+ {id:"online-t",name:"Online attack, rate-limited",sub:"login page with lockout: ~100 guesses/hour",rate:100/3600},
+ {id:"online",name:"Online attack, no rate limit",sub:"badly protected website: ~10 guesses/sec",rate:10},
+ {id:"bcrypt",name:"Offline: bcrypt (cost 10), 1× RTX 4090",sub:"good password storage: ~10 thousand/sec",rate:1e4},
+ {id:"md5",name:"Offline: MD5, 1× RTX 4090",sub:"weak storage: ~160 billion/sec",rate:1.6e11},
+ {id:"ntlm",name:"Offline: NTLM, 8× RTX 4090 rig",sub:"Windows hashes: ~2.3 trillion/sec",rate:2.3e12}
+];
+function fmtTime(s){
+  if(s<1)return"INSTANT";const u=[["second",1],["minute",60],["hour",3600],["day",86400],["month",2629800],["year",31557600],["century",3155760000]];
+  if(s>=31557600*1.38e10)return"> AGE OF UNIVERSE";
+  if(s>=31557600*1e6){const y=s/31557600;const p=[[1e12,"trillion"],[1e9,"billion"],[1e6,"million"]].find(x=>y>=x[0]);return Math.round(y/p[0])+" "+p[1]+" years"}
+  if(s>=31557600*1000)return Math.round(s/31557600/1000).toLocaleString()+" thousand years";
+  let lbl=u[0];for(const x of u)if(s>=x[1])lbl=x;const v=Math.round(s/lbl[1]);
+  const name=lbl[0]==="century"?(v===1?"century":"centuries"):lbl[0]+(v===1?"":"s");return v.toLocaleString()+" "+name}
+const LEVELS=[
+ {max:3,name:"PWNED INSTANTLY",c:"#ff2b4e"},{max:6,name:"VERY WEAK",c:"#ff2b4e"},{max:8,name:"WEAK",c:"#ff7a1a"},
+ {max:10,name:"FAIR",c:"#ffb000"},{max:13,name:"STRONG",c:"#7dff4a"},{max:99,name:"FORTRESS",c:"#00ff66"}];
+const SEGC={leaked:"#ff2b4e",word:"#ff7a1a",l33t:"#ff7a1a",reversed:"#ff7a1a",year:"#ffb000",date:"#ffb000",digits:"#ffb000",repeat:"#ffb000",sequence:"#ffb000",keyboard:"#ffb000",brute:"#00ff66"};
+const SEGL={leaked:"LEAKED PASSWORD",word:"DICTIONARY WORD",l33t:"L33T WORD",reversed:"REVERSED WORD",year:"YEAR",date:"DATE",digits:"DIGITS",repeat:"REPEAT",sequence:"SEQUENCE",keyboard:"KEYBOARD WALK",brute:"RANDOM CHARS"};
+
+
+/* ================= UI ================= */
+const SHORT={"online-t":"Website login (rate-limited)","online":"Website login (no limit)","bcrypt":"Stolen database (bcrypt)","md5":"Hacker's GPU (MD5)","ntlm":"Cracking rig (8 GPUs)"};
+RIGS.forEach(r=>{r.name=SHORT[r.id]});
+const HEAD=RIGS.find(r=>r.id==="md5");
+const RLV=[{s:1,name:"CRITICAL",c:"#ff2b4e"},{s:3600,name:"VERY WEAK",c:"#ff2b4e"},{s:2629800,name:"WEAK",c:"#ff7a1a"},{s:3155760000,name:"FAIR",c:"#ffb000"},{s:3.15576e13,name:"STRONG",c:"#7dff4a"},{s:Infinity,name:"FORTRESS",c:"#00ff66"}];
+
+$$("nav button").forEach(b=>b.onclick=()=>{$$("nav button").forEach(x=>x.classList.toggle("on",x===b));$$(".tab").forEach(t=>t.classList.toggle("on",t.id==="t-"+b.dataset.tab));beep(880,.03);
+  setTimeout(()=>(b.dataset.tab==="email"?$("#email"):$("#pw")).focus(),50)});
+
+let snd=ls.get("pwn_snd")==="1",actx=null;
+function updSnd(){$("#sndBtn").textContent="SND:"+(snd?"ON":"OFF")}updSnd();
+$("#sndBtn").onclick=()=>{snd=!snd;ls.set("pwn_snd",snd?"1":"0");updSnd();beep(660,.05)};
+function beep(f=440,d=.08,type="square",vol=.04){if(!snd)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;g.gain.value=vol;o.connect(g);g.connect(actx.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+d);o.stop(actx.currentTime+d)}catch(e){}}
+function alarm(){[0,250,500].forEach(t=>setTimeout(()=>beep(220,.18,"sawtooth",.06),t))}
+function chime(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.12,"triangle",.05),i*90))}
+
+(()=>{const c=$("#rain"),x=c.getContext("2d");const chars="アカサタナハマヤラワ0123456789ABCDEF<>/{}$#@!".split("");let cols,drops,fs=16;
+  function rs(){c.width=innerWidth;c.height=innerHeight;cols=Math.ceil(c.width/fs);drops=Array.from({length:cols},()=>Math.random()*-50)}rs();addEventListener("resize",rs);
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  setInterval(()=>{x.fillStyle="rgba(2,6,4,.12)";x.fillRect(0,0,c.width,c.height);x.font=fs+"px monospace";
+    for(let i=0;i<cols;i++){x.fillStyle=Math.random()<.04?"#d6ffe5":"#00ff66";x.fillText(chars[Math.random()*chars.length|0],i*fs,drops[i]*fs);
+      if(drops[i]*fs>c.height&&Math.random()>.975)drops[i]=0;drops[i]++}},55)})();
+
+/* ---- password ---- */
+let pwnCount=null,cur=null,pwnTimer=null,pwnSeq=0;
+$("#pw").addEventListener("input",()=>{pwnCount=null;render();clearTimeout(pwnTimer);pwnTimer=setTimeout(checkPwned,600)});
+// best of: zxcvbn (30k-word dictionaries, if CDN loaded) and the built-in pattern model
+// pure brute force: every combination of the character types used
+function charPool(pw){let p=0;if(/[a-z]/.test(pw))p+=26;if(/[A-Z]/.test(pw))p+=26;if(/[0-9]/.test(pw))p+=10;if(/[ -\/:-@\[-`{-~]/.test(pw))p+=33;if(/[^\x20-\x7e]/.test(pw))p+=100;return p}
+function baseLog(pw){return [...pw].length*Math.log10(Math.max(charPool(pw),1))}
+function guessesLog(){return cur.lg}
+const brief=t=>{t=String(t||"").replace(/<[^>]*>/g,"").replace(/\s+/g," ").trim();return t.length>170?t.slice(0,167).replace(/\s+\S*$/,"")+"…":t};
+function render(){const pw=$("#pw").value;
+  if(!pw){$("#pwRes").classList.add("hidden");cur=null;return}
+  $("#pwRes").classList.remove("hidden");cur={lg:baseLog(pw)};const lg=guessesLog();
+  const secs=Math.pow(10,lg)/HEAD.rate;let li=RLV.findIndex(l=>secs<l.s);const lv=RLV[li];
+  $("#bigTime").textContent=secs<1?"INSTANTLY":fmtTime(secs);$("#bigTime").style.color=lv.c;$("#bigTime").style.textShadow=`0 0 18px ${lv.c}`;
+  $("#bigRate").textContent=lv.name+"  ·  "+li+"/5";
+  const pool=charPool(pw),len=[...pw].length;$("#combo").textContent=`${pool} possible characters ^ ${len} long = ${lg<6?Math.round(Math.pow(10,lg)).toLocaleString():"10^"+lg.toFixed(1)} combinations`;$("#bigRate").style.color=lv.c;
+  $$("#meter i").forEach((m,i)=>{m.style.background=i<=li?lv.c:"#07200f";m.style.boxShadow=i<=li?`0 0 8px ${lv.c}`:"none"});
+  const pl=$("#pwnLine");pl.classList.remove("hidden");
+  if(pwnCount===null)pl.innerHTML=`<span style="color:var(--mut)">CHECKING DATA BREACHES<span class="blink">_</span></span>`;
+  else if(pwnCount<0)pl.innerHTML=`<span style="color:var(--mut)">BREACH CHECK UNAVAILABLE (OFFLINE)</span>`;
+  else if(pwnCount===0)pl.innerHTML=`<span style="color:var(--g)">✓ NOT FOUND IN ANY KNOWN DATA BREACH</span>`;
+  else pl.innerHTML=`⚠ FOUND IN DATA BREACHES ${pwnCount.toLocaleString()} TIMES<div class="pwsum">This exact password appears in leaked password lists from real data breaches. The breach list doesn't record which breach it came from.</div>`;
+  const cls=[["a-z","lowercase",/[a-z]/],["A-Z","uppercase",/[A-Z]/],["0-9","numbers",/[0-9]/],["#$!","symbols",/[^a-zA-Z0-9]/]];
+  $("#cx").innerHTML=cls.map(c=>{const on=c[2].test(pw);return `<div class="cxi ${on?"on":""}"><b>${on?"✓":"✗"} ${c[0]}</b>${c[1]}</div>`}).join("")+`<div class="cxi on"><b>${len}</b>length</div>`}
+async function checkPwned(){const pw=$("#pw").value;if(!pw)return;const id=++pwnSeq;const h=sha1(utf8(pw)).toUpperCase();
+  try{const r=await fetch("https://api.pwnedpasswords.com/range/"+h.slice(0,5));if(!r.ok)return;const txt=await r.text();if(id!==pwnSeq||$("#pw").value!==pw)return;
+    let count=0;for(const l of txt.split(/\r?\n/)){const[s,c]=l.split(":");if(s===h.slice(5)){count=parseInt(c,10);break}}
+    pwnCount=count;if(count>0)alarm();render()}catch(e){if(id===pwnSeq){pwnCount=-1;render()}}}
+
+/* ---- attack sim: REAL brute force of the password typed on THIS page, in THIS browser ---- */
+let atkRun=0,atkLive=false,atkTimer=null;
+$("#atkBtn").onclick=()=>{if(!$("#pw").value)return;$("#atk").classList.add("on");runAttack()};
+const hms=ms=>{const t=Math.floor(ms/1000);return [t/3600|0,(t/60|0)%60,t%60].map(v=>String(v).padStart(2,"0")).join(":")};
+$("#atkClose").onclick=()=>{if(atkLive){atkLive=false}else{atkRun++;clearTimeout(atkTimer);$("#atk").classList.remove("on")}};
+// charset guaranteed to contain every character in the password, in realistic order
+function buildCharset(pw){let cs="abcdefghijklmnopqrstuvwxyz";
+  if(/[A-Z]/.test(pw))cs+="ABCDEFGHIJKLMNOPQRSTUVWXYZ";if(/[0-9]/.test(pw))cs+="0123456789";
+  for(const c of pw)if(!cs.includes(c))cs+=c;return cs}
+function runAttack(){const id=++atkRun;atkLive=true;$("#atkClose").textContent="STOP";
+  const pw=$("#pw").value,cs=buildCharset(pw),N=cs.length,tgt=$("#atkTgt"),res=$("#atkRes");
+  res.style.color="var(--amber)";
+  const idx=[0],t0=performance.now();let tried=0,found=false,cur="";
+  const theoSecs=Math.pow(N,pw.length)/HEAD.rate;
+  const candidate=()=>{let str="";for(const i of idx)str+=cs[i];return str};
+  const inc=()=>{let k=idx.length-1;while(k>=0){if(++idx[k]<N)return;idx[k]=0;k--}idx.length++;for(let i=0;i<idx.length;i++)idx[i]=0};
+  function step(){
+    if(id!==atkRun||!atkLive)return finish(false);
+    const deadline=performance.now()+28;            // ~1 frame of real work
+    while(performance.now()<deadline){cur=candidate();tried++;if(cur===pw){found=true;break}inc()}
+    const el=performance.now()-t0,rate=tried/(el/1000)||0;
+    if(!found)tgt.innerHTML=`<span class="sc">${esc(cur)||"&nbsp;"}</span>`;
+    $("#atkRate").textContent=fmtN(rate);$("#atkTries").textContent=tried<1e6?Math.floor(tried).toLocaleString():fmtN(tried);
+    $("#atkEta").textContent=hms(el);
+    if(found)return finish(true);
+    res.textContent=`${tried.toLocaleString()} GUESSES TRIED` + (theoSecs>el/1000?`  ·  ~${fmtTime(theoSecs)} FOR A GPU` : "");
+    if(Math.random()<.5)beep(1400+Math.random()*2600,.006,"square",.012);
+    atkTimer=setTimeout(step,0);
+  }
+  function finish(cracked){$("#atkClose").textContent="CLOSE";const el=performance.now()-t0;
+    if(cracked){atkLive=false;tgt.innerHTML=`<span class="lk" style="color:var(--red)">${esc(pw)}</span>`;res.style.color="var(--red)";
+      res.innerHTML=`CRACKED IN ${el<1000?(el|0)+" ms":hms(el)}<div class="pwsum" style="color:#ff9aab">Found after really trying ${tried.toLocaleString()} combinations. A hacker's GPU would reach this ${fmtN(HEAD.rate/Math.max(1,tried/(el/1000)))}× faster.</div>`;alarm()}
+    else{res.style.color="var(--g)";res.innerHTML=`STOPPED AFTER ${tried.toLocaleString()} GUESSES<div class="pwsum" style="color:var(--mut)">Still not found. At ${fmtTime(theoSecs)} to try every combination, brute force alone won't get there.</div>`;chime()}
+  }
+  step();
+}
+
+/* ---- email ---- */
+let mode=ls.get("pwn_mode")||"live";
+function setMode(m){mode=m;ls.set("pwn_mode",m);$$("[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===m))}
+setMode(mode);$$("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+const normName=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");
+const LOCAL=new Map(BREACHES.map(b=>[normName(b.n),b]));
+let xon=null;async function xonCat(){if(xon)return xon;xon=new Map();try{const j=await (await fetch("https://api.xposedornot.com/v1/breaches")).json();(j.exposedBreaches||[]).forEach(b=>xon.set(normName(b.breachID),b))}catch(e){}return xon}
+$("#emailForm").onsubmit=async e=>{e.preventDefault();const email=$("#email").value.trim(),out=$("#emailOut"),btn=$("#scanBtn");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){out.innerHTML='<div class="log bad" style="color:var(--red)">Invalid email</div>';return}
+  btn.disabled=true;out.innerHTML='<div class="log dim" style="color:var(--mut)">Scanning<span class="blink">_</span></div>';let names;
+  try{if(mode==="live"){const r=await fetch("https://api.xposedornot.com/v1/check-email/"+encodeURIComponent(email));
+      if(r.status===404)names=[];else{const j=await r.json();if(j.Error&&/not found/i.test(j.Error))names=[];else if(Array.isArray(j.breaches))names=j.breaches.flat().filter(Boolean);else throw 0}}
+    else{await sleep(700);names=simulate(email)}}
+  catch(ex){out.innerHTML='<div class="row"><span style="color:var(--red)">Lookup failed</span><button class="ghost" id="goSim">USE OFFLINE DEMO</button></div>';$("#goSim").onclick=()=>{setMode("sim");$("#emailForm").requestSubmit()};btn.disabled=false;return}
+  const cat=mode==="live"?await xonCat():new Map();
+  const info=names.map(nm=>{const k=normName(nm),x=cat.get(k),l=LOCAL.get(k);return{n:nm,y:x?.breachedDate?new Date(x.breachedDate).getFullYear():l?.y,r:x?.exposedRecords||l?.r,d:(x?.exposedData?.length?x.exposedData:l?.d)||[],t:brief(l?.t||x?.exposureDescription)}}).sort((a,b)=>(b.y||0)-(a.y||0));
+  const sim=mode==="sim"?'<span class="sim">DEMO</span>':"";
+  if(info.length){alarm();out.innerHTML=`<div class="verdict pwned">${sim}<h2>PWNED</h2><p>${info.length} breach${info.length>1?"es":""}</p></div><div class="cards">${info.map(b=>`<div class="card hit"><h3>${esc(b.n)}<span>${b.y||""}</span></h3>${b.r?`<div class="rec">${fmtN(b.r)} accounts exposed</div>`:""}${b.t?`<div class="sum">${esc(b.t)}</div>`:""}<div class="chips">${b.d.slice(0,5).map(d=>`<span class="chip ${SENSITIVE.test(d)?"r":""}">${esc(d)}</span>`).join("")}</div></div>`).join("")}</div>`}
+  else{chime();out.innerHTML=`<div class="verdict safe">${sim}<h2>NOT PWNED</h2></div>`}
+  btn.disabled=false};
+function simulate(email){const e=email.toLowerCase();if(/safe|clean|secure/.test(e))return[];const h=sha1(utf8(e));let seed=parseInt(h.slice(0,8),16);const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+  const hot=/pwned|hacked|owned/.test(e);if(!hot&&rnd()<.25)return[];const cnt=hot?7+Math.floor(rnd()*5):1+Math.floor(rnd()*5),pool=BREACHES.map(b=>b.n),out=[];
+  while(out.length<cnt&&pool.length)out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);return out}
+
+/* ---- wipe / idle ---- */
+function wipe(){atkRun++;atkLive=false;clearTimeout(atkTimer);$("#atk").classList.remove("on");$("#email").value="";$("#emailOut").innerHTML="";$("#pw").value="";pwnCount=null;pwnSeq++;render();beep(300,.1)}
+$("#wipeBtn").onclick=wipe;addEventListener("keydown",e=>{if(e.key==="Escape")wipe()});
+let idle;const resetIdle=()=>{clearTimeout(idle);idle=setTimeout(()=>{if($("#pw").value||$("#email").value)wipe()},120000)};
+["keydown","pointerdown","pointermove"].forEach(ev=>addEventListener(ev,resetIdle));resetIdle();
+$("#pw").focus();
+
+</script>
+</body>
+</html>
